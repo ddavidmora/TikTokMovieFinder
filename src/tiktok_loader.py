@@ -1,30 +1,41 @@
 import yt_dlp
 
+
 def fetch_tiktok_metadata(video_url: str):
-    """
-        Extracts metadata (description, tags, etc.) from a TikTok URL
-        without downloading the video file.
-        """
     ydl_opts = {
-        'skip_download': True,  # We only want text data
-        'quiet': True,  # Don't print huge logs
+        'skip_download': True,
+        'quiet': True,
         'no_warnings': True,
-        'extract_flat': True,  # Fast extraction
+        # YOUR CHANGES HERE:
+        'extract_flat': False,  # Must be False to get comments
+        'get_comments': True,  # Turn on comments
+        'cookiefile': 'cookies.txt',
     }
 
-    print(f"🔍 Scraping metadata for: {video_url}...")
+    print(f"🔍 Scraping metadata (and comments) for: {video_url}...")
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=False)
 
-            # Extract the useful bits for the AI
+            # NEW: Extract top 10 comments
+            # yt-dlp returns them in a list called 'comments'
+            raw_comments = info.get("comments", [])
+            top_comments = []
+
+            # Grab the text from the first 10 comments
+            for comment in raw_comments[:10]:
+                text = comment.get("text")
+                if text:
+                    top_comments.append(text)
+
             data = {
                 "id": info.get("id"),
                 "uploader": info.get("uploader"),
-                "description": info.get("description", ""),  # This is the Caption
+                "description": info.get("description", ""),
                 "tags": info.get("tags", []),
-                "title": info.get("title", "")
+                "title": info.get("title", ""),
+                "comments": top_comments  # <--- We added this
             }
 
             return data
@@ -32,11 +43,3 @@ def fetch_tiktok_metadata(video_url: str):
     except Exception as e:
         print(f"❌ Error scraping TikTok: {e}")
         return None
-
-
-# Quick test if you run this file directly
-if __name__ == "__main__":
-    # Test with a known movie clip (e.g., an Interstellar clip or similar)
-    test_url = "https://www.tiktok.com/@netflix/video/733838..."  # Replace with a REAL link from your collection
-    result = fetch_tiktok_metadata(test_url)
-    print(result)
